@@ -1,0 +1,74 @@
+enum CmdID
+{
+    CMD_PING_REQ            = 10000;
+    
+    CMD_REG_REQ             = 10001;
+    CMD_REQ_RSP             = 10002;
+    
+    CMD_LOGIN_REQ           = 10003;
+    CMD_LOGIN_RSP           = 10004;
+    
+    CMD_SEND_MSG_REQ        = 10005;
+    CMD_RECV_MSG_REQ        = 10007;
+    
+    CMD_LOGOUT_REQ          = 10009;
+}
+
+message PingReq
+{
+    optional uint32 id = 1;
+}
+
+message RegReq
+{
+    required string name = 1;
+    required string passwd = 2;
+}
+message RegRsp
+{
+    optional int32 ret = 1;
+    optional uint32 id = 2;
+}
+
+message LoginReq
+{
+    optional uint32 id = 1;
+    optional string passwd = 2;
+}
+
+message MemberList
+{
+    message Member
+    {
+        optional uint32 id = 1;
+        optional string name = 2;
+    }
+    
+    repeated Member member = 1; 
+}
+message LoginRsp
+{
+    optional int32 ret = 1;
+    optional uint32 id = 2;
+    optional string name = 3;
+    optional MemberList member_list = 4;
+}
+
+message LogoutReq
+{
+    optional uint32 id = 1;
+}
+
+message SendMsgReq
+{
+    optional string msg = 1;
+}
+
+message Msg
+{
+    optional uint32 type = 1; //0:登录;1:退出;2普通消息
+    optional uint32 send_id = 2;
+    optional string send_name = 3;
+    optional string msg = 4;
+    optional uint32 time = 5;
+}
