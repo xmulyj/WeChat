@@ -81,7 +81,7 @@ void WeChatServer::OnCheckPerSec(uint64_t now_ms)
 }
 */
 
-#if SHOW_EXAMPLE == 1
+#if USE_EXAMPLE == 1
 int WeChatServer::OnExample(TCPSession *session, const char *data, uint32_t head_size, uint32_t body_size, uint64_t tid)
 {
     string req_str;

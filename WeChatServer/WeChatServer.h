@@ -14,13 +14,13 @@
 #include "enet/ENet.h"
 using namespace enet;
 
-#define SHOW_EXAMPLE 0
+#include "MacroDefine.h"
 
 /* 1: 10000以内的CmdID内部占用,请从10001开始定义自己的CmdID;
  * 2: 建议将cmd ID移到统一的文件中进行定义;
  */
 
-#if SHOW_EXAMPLE == 1
+#if USE_EXAMPLE == 1
 #define CMD_EXAMPLE_REQ  9998
 #define CMD_EXAMPLE_RSP  9999
 #endif
@@ -30,7 +30,7 @@ using namespace enet;
 #include "UserInfo.h"
 #include "../proto/WeChat.pb.h"
 
-class WeChatServer:public TCPServer, public TCPServerRoute, public CommonSend
+class WeChatServer:public TCPServer, public CommonSend
 {
 public:
     WeChatServer(ConfReader *conf):TCPServer(conf){}
@@ -41,20 +41,34 @@ protected:
     // @override
     bool OnPacket(TCPSession *session, uint32_t cmd, const char *packet_data, uint32_t head_size, uint32_t body_size, uint64_t tid);
 
+    // 需要处理自己的错误的话,请打开开关
+#if USE_ERROR
     // @override
+    // 会话结束调用,回收相关资源
     IOStatus OnError(TCPSession *session, uint64_t now_ms);
+#endif
 
-    /* 需要处理自己的监听,请去掉注释
+    // 需要处理自己的错误的话,请打开开关
+#if USE_LISTEN
     // @override
-    // 创建listen成功后调用
-    void OnListenSucc(ListenInfo &listen_info, const ConfSessionParam &session_param);
-    */
+    // 创建listen成功后调用,需要处理listen_fd的连接事件
+    bool OnListenSucc(uint32_t index, uint32_t listen_fd, const ConfSessionParam &session_param)
+#endif
 
-    /* 需要处理每秒检查任务,请去掉注释
+    // 需要处理每秒检查任务的话,请打开开关
+#if USE_CHECK_TIMER
     // @override
     // 每秒定时器触发
     void OnCheckPerSec(uint64_t now_ms);
-    */
+#endif
+
+    // 需要按cmd/svr_id做路由选择的话,请打开开关
+#if USE_CMD_ROUTE
+    // @override
+    // 根据cmd获取服务器组中的一个session(默认返回第一个有效的session).子类可以根据自己的路由规则需求重写本方法
+    virtual Session* SererGroup_GetSession(uint32_t cmd, uint32_t svr_id, vector<ServerInfo>&svr_group);
+#endif
+
 private:
     // CmdID的处理方法类型定义
     //   session: 请求的会话信息(即代表一个连接)
@@ -67,7 +81,7 @@ private:
     // handler指针类型定义
     typedef int (WeChatServer::*HANLDER_PTR)(TCPSession *session, const char *data, uint32_t head_size, uint32_t body_size, uint64_t tid);
     // 声明handler方法
-#if SHOW_EXAMPLE == 1
+#if USE_EXAMPLE == 1
     HANDLER OnExample;
 #endif
     HANDLER OnPingReq;
@@ -77,7 +91,7 @@ private:
     HANDLER OnSendMsgReq;
 
     HANDLE_REG(WeChatServer, uint32_t, HANLDER_PTR)
-#if SHOW_EXAMPLE == 1
+#if USE_EXAMPLE == 1
     HANDLE_CMD(CMD_EXAMPLE_REQ, OnExample)
 #endif
     HANDLE_CMD(CMD_PING_REQ, OnPingReq)
