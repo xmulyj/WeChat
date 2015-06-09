@@ -6,7 +6,7 @@ FLAGS=
 LIBNAME=libproto.a
 
 
-all: gen $(OBJS) lib
+all:$(OBJS) lib
 
 gen:*.proto
 	protoc --cpp_out=./ *.proto

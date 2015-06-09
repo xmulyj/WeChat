@@ -51,7 +51,7 @@ int CWeChatClient::SendAndRecvMsg(int fd, int cmd, Message *req, Message *rsp)
     req->SerializePartialToArray(DataBuffer+head_size, body_size);
 
     int total_size = head_size+body_size;
-    int ret = TcpSocket::SendAll(fd, DataBuffer, total_size);
+    int ret = TCPSocket::SendAll(fd, DataBuffer, total_size);
     if(ret != total_size)
     {
         return -3;
@@ -59,7 +59,7 @@ int CWeChatClient::SendAndRecvMsg(int fd, int cmd, Message *req, Message *rsp)
 
     //接收登录回包
     uint32_t data_size = sizeof(StDefaultPacket);
-    ret = TcpSocket::RecvAll(fd, DataBuffer, data_size);
+    ret = TCPSocket::RecvAll(fd, DataBuffer, data_size);
     if(ret != data_size)
     {
         return -4;
@@ -69,7 +69,7 @@ int CWeChatClient::SendAndRecvMsg(int fd, int cmd, Message *req, Message *rsp)
     {
         return -5;
     }
-    ret = TcpSocket::RecvAll(fd, DataBuffer+head_size, body_size);
+    ret = TCPSocket::RecvAll(fd, DataBuffer+head_size, body_size);
     if(ret != body_size)
     {
         return -6;
@@ -201,7 +201,7 @@ int CWeChatClient::OnSendMsg()
         return -1;
     }
 
-    int ret = TcpSocket::SendAll(m_Fd, m_SendBuffer, size);
+    int ret = TCPSocket::SendAll(m_Fd, m_SendBuffer, size);
     if(ret != size)
     {
         m_ChatDialog->AppendMsg("send failed.");
@@ -214,7 +214,7 @@ int CWeChatClient::OnSendMsg()
 int CWeChatClient::OnRecvMsg()
 {
     uint32_t data_size = sizeof(StDefaultPacket);
-    int ret = TcpSocket::RecvAll(m_Fd, m_RecvBuffer, data_size);
+    int ret = TCPSocket::RecvAll(m_Fd, m_RecvBuffer, data_size);
     if(ret != data_size)
     {
         printf("recv head failed, head_size=%d, ret=%d.\n", data_size, ret);
@@ -229,7 +229,7 @@ int CWeChatClient::OnRecvMsg()
         printf("packet data is invalid.\n");
         return -2;
     }
-    ret = TcpSocket::RecvAll(m_Fd, m_RecvBuffer+head_size, body_size);
+    ret = TCPSocket::RecvAll(m_Fd, m_RecvBuffer+head_size, body_size);
     if(ret != body_size)
     {
         printf("recv body data failed.body_size=%d, ret=%d\n", body_size, ret);
@@ -294,7 +294,7 @@ int CWeChatClient::DoPing()
     req.SerializePartialToArray(m_SendBuffer+head_size, body_size);
 
     uint32_t size = head_size+body_size;
-    int ret = TcpSocket::SendAll(m_Fd, m_SendBuffer, size);
+    int ret = TCPSocket::SendAll(m_Fd, m_SendBuffer, size);
     if(ret != size)
     {
         printf("send failed. size=%d, ret=%d", size, ret);

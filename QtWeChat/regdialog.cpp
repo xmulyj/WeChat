@@ -38,7 +38,7 @@ void RegDialog::on_regButton_clicked()
         return;
     }
 
-    int fd = TcpSocket::Connect("127.0.0.1", 8080);
+    int fd = TCPSocket::Connect("127.0.0.1", 8080);
     if (fd < 0)
     {
         QMessageBox::information(this, "注册", "连接服务器失败,请稍候重试!");

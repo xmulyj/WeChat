@@ -41,7 +41,7 @@ void LoginDialog::on_loginButton_clicked()
     uint32_t id = str_id.toInt(&bret, 10);
 
     //创建连接
-    int fd = TcpSocket::Connect("127.0.0.1", 8080);
+    int fd = TCPSocket::Connect("127.0.0.1", 8080);
     if (fd < 0)
     {
         QMessageBox::information(this, "网络", "连接服务器失败,请稍候重试!");
