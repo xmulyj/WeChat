@@ -12,10 +12,10 @@ CFLAGS=-g -D__LOG4CPLUS__
 
 all:bin/WeStatusServer
 
-bin/WeStatusServer:Main.cpp WeStatusServer.cpp WeStatusServer.h DBWrap.h 
+bin/WeStatusServer:Main.cpp WeStatusServer.cpp WeStatusServer.h 
 	if [ ! -d "bin" ];then mkdir bin;fi
 	if [ ! -d "log" ];then mkdir log;fi
-	g++ Main.cpp WeStatusServer.cpp DBWrap.h ${INCLUDE} ${LIBS} ${CFLAGS} -o $@
+	g++ Main.cpp WeStatusServer.cpp ${INCLUDE} ${LIBS} ${CFLAGS} -o $@
 
 clean:
 	rm bin/WeStatusServer

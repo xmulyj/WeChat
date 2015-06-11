@@ -30,7 +30,7 @@ using namespace enet;
 #include "../proto/WeCmdID.pb.h"
 #include "../proto/WeStatus.pb.h"
 
-#include "DBWrap.h"
+#include "../DBWrap/DBWrap.h"
 #include "CommonSend.h"
 
 class WeStatusServer:public TCPServer, public CommonSend
