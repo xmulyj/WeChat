@@ -21,24 +21,8 @@ int WeChatServer::OnInit(ConfReader *config)
     //注册Cmd处理方法
     CALL_HANDLE_REG();
 
-//需要路由功能的话请设置为1
-#if 0    //路由规则
-    string conf_route_file;
-    config->GetValue("TCP_SERVER", "route_conf", conf_route_file);
-    if(conf_route_file == "")
-    {
-        LOG_ERROR(logger, "OnInit:[TCP_SERVER]route_conf not set");
-        return -1;
-    }
-    int ret = LoadRouteConf(conf_route_file.c_str());
-    if(ret != 0)
-    {
-        LOG_ERROR(logger, "OnInit:LoadRouteConf failed.ret="<<ret);
-        return -1;
-    }
-#endif
-
     //添加其他初始化内容
+    SetServer(this);
 
     return 0;
 }
@@ -47,7 +31,7 @@ bool WeChatServer::OnPacket(TCPSession *session, uint32_t cmd, const char *packe
 {
     if(!HAS_HANDLE(cmd))
     {
-        LOG_DEBUG(logger, "can't find handler for cmd="<<cmd<<".fd="<<session->GetFD());
+        LOG_TRACE(logger, "can't find handler for cmd="<<cmd<<".fd="<<session->GetFD()<<",pass to parent class");
         //由父类来处理
         return TCPServer::OnPacket(session, cmd, packet_data, head_size, body_size, tid);
     }
@@ -122,6 +106,22 @@ int WeChatServer::OnPingReq(TCPSession *session, const char *data, uint32_t head
     }
     LOG_DEBUG(logger, "OnPingReq:session="<<session<<".req="<<req.ShortDebugString());
 
+    //通知状态服务器(不需要回包)
+    NotifyUserStatusReq status_req;
+    status_req.set_type(1);
+    UserStatus * user_status = status_req.mutable_user_status();
+    user_status->set_uid(req.id());
+    user_status->set_access_index(1);
+    int ret = ReqSvr(CMD_NOTIFY_USERSTATUS_REQ, &status_req, tid, NULL);
+    if(ret != 0)
+    {
+        LOG_WARN(logger, "OnLoginReq:send NotifyUserStatus failed.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
+    }
+    else
+    {
+        LOG_DEBUG(logger, "OnLoginReq:send NotifyUserStatus succ.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
+    }
+
     return 0;
 }
 
@@ -193,6 +193,22 @@ int WeChatServer::OnLoginReq(TCPSession *session, const char *data, uint32_t hea
         rsp.set_id(user_info->id);
         rsp.set_name(user_info->name);
         FillMemberList(user_info->id, *(rsp.mutable_member_list()));
+
+        //通知状态服务器(不需要回包)
+        NotifyUserStatusReq status_req;
+        status_req.set_type(1);
+        UserStatus * user_status = status_req.mutable_user_status();
+        user_status->set_uid(user_info->id);
+        user_status->set_access_index(1);
+        int ret = ReqSvr(CMD_NOTIFY_USERSTATUS_REQ, &status_req, tid, NULL);
+        if(ret != 0)
+        {
+            LOG_WARN(logger, "OnLoginReq:send NotifyUserStatus failed.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
+        }
+        else
+        {
+            LOG_DEBUG(logger, "OnLoginReq:send NotifyUserStatus succ.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
+        }
     }
 
     //回复登录回包

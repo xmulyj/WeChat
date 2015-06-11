@@ -1,0 +1,8 @@
+enum CmdID_
+{
+    //StatusServer
+    CMD_NOTIFY_USERSTATUS_REQ    = 0x00020000;
+    CMD_GET_USERSTATUS_REQ       = 0x00020001;
+    CMD_GET_USERSTATUS_RSP       = 0x00020002;
+}
+

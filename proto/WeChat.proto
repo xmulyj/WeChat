@@ -12,6 +12,7 @@ enum CmdID
     CMD_RECV_MSG_REQ        = 10007;
     
     CMD_LOGOUT_REQ          = 10009;
+
 }
 
 message PingReq

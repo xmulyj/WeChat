@@ -1,0 +1,21 @@
+message UserStatus
+{
+    optional uint32 uid = 1;
+    optional uint32 access_index = 2;
+}
+
+message NotifyUserStatusReq
+{
+    optional uint32 type = 1; //1:在线; 2:离线
+    optional UserStatus user_status = 2;
+}
+
+message GetUserStatusReq
+{
+    repeated uint32 uid_list = 1;
+}
+message GetUserStatusRsp
+{
+    optional int32 ret = 1;
+    repeated UserStatus user_status_list = 2;
+}
