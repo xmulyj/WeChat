@@ -46,7 +46,16 @@ IOStatus WeChatServer::OnError(TCPSession *session, uint64_t now_ms)
 {
     //处理错误
     LOG_DEBUG(logger, "OnError:remove session from UserInfoMap.session="<<session);
+
+    SessionUserInfoMap::iterator it = m_SessionUserInfoMap.find(session);
+    if(it != m_SessionUserInfoMap.end())
+    {
+        //通知状态服务器(不需要回包)
+        NotifyUserStatus("OnError", 2, it->second->id, 1);
+    }
+
     m_SessionUserInfoMap.erase(session);
+
     return TCPServer::OnError(session, now_ms);
 }
 
@@ -107,21 +116,7 @@ int WeChatServer::OnPingReq(TCPSession *session, const char *data, uint32_t head
     LOG_DEBUG(logger, "OnPingReq:session="<<session<<".req="<<req.ShortDebugString());
 
     //通知状态服务器(不需要回包)
-    NotifyUserStatusReq status_req;
-    status_req.set_type(1);
-    UserStatus * user_status = status_req.mutable_user_status();
-    user_status->set_uid(req.id());
-    user_status->set_access_index(1);
-    int ret = ReqSvr(CMD_NOTIFY_USERSTATUS_REQ, &status_req, tid, NULL);
-    if(ret != 0)
-    {
-        LOG_WARN(logger, "OnLoginReq:send NotifyUserStatus failed.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
-    }
-    else
-    {
-        LOG_DEBUG(logger, "OnLoginReq:send NotifyUserStatus succ.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
-    }
-
+    NotifyUserStatus("OnPingReq", 1, req.id(), 1);
     return 0;
 }
 
@@ -195,20 +190,7 @@ int WeChatServer::OnLoginReq(TCPSession *session, const char *data, uint32_t hea
         FillMemberList(user_info->id, *(rsp.mutable_member_list()));
 
         //通知状态服务器(不需要回包)
-        NotifyUserStatusReq status_req;
-        status_req.set_type(1);
-        UserStatus * user_status = status_req.mutable_user_status();
-        user_status->set_uid(user_info->id);
-        user_status->set_access_index(1);
-        int ret = ReqSvr(CMD_NOTIFY_USERSTATUS_REQ, &status_req, tid, NULL);
-        if(ret != 0)
-        {
-            LOG_WARN(logger, "OnLoginReq:send NotifyUserStatus failed.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
-        }
-        else
-        {
-            LOG_DEBUG(logger, "OnLoginReq:send NotifyUserStatus succ.ret="<<ret<<",tid="<<tid<<",req="<<status_req.ShortDebugString());
-        }
+        NotifyUserStatus("OnLoginReq", 1, user_info->id, 1);
     }
 
     //回复登录回包
@@ -364,5 +346,24 @@ void WeChatServer::FillMemberList(uint32_t id, MemberList &member_list)
         MemberList::Member &member = *member_list.add_member();
         member.set_id(user_info.id);
         member.set_name(user_info.name);
+    }
+}
+
+void WeChatServer::NotifyUserStatus(const string &log_flag, uint32_t type, uint32_t id, uint32_t access_index)
+{
+    //通知状态服务器(不需要回包)
+    NotifyUserStatusReq status_req;
+    status_req.set_type(type);
+    UserStatus * user_status = status_req.mutable_user_status();
+    user_status->set_uid(id);
+    user_status->set_access_index(access_index);
+    int ret = ReqSvr(CMD_NOTIFY_USERSTATUS_REQ, &status_req, 0, NULL);
+    if(ret != 0)
+    {
+        LOG_WARN(logger, "NotifyUserStatus:"<<log_flag<<".send NotifyUserStatus failed.ret="<<ret<<",req="<<status_req.ShortDebugString());
+    }
+    else
+    {
+        LOG_DEBUG(logger, "NotifyUserStatus:"<<log_flag<<".send NotifyUserStatus succ.ret="<<ret<<",req="<<status_req.ShortDebugString());
     }
 }

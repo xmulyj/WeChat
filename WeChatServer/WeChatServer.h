@@ -115,6 +115,8 @@ private:
 
     UserInfo* LoginCheck(LoginReq &req);
     void FillMemberList(uint32_t id, MemberList &member_list);
+
+    void NotifyUserStatus(const string &log_flag, uint32_t type, uint32_t id, uint32_t access_index);
 private:
     DECL_LOGGER(logger);
 };
