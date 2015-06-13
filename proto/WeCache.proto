@@ -1,0 +1,20 @@
+message SaveMsgReq
+{
+    optional uint32 send_id = 1;
+    optional uint32 recv_id = 2;
+    optional bytes msg      = 3;
+}
+
+message SaveMsgRsp
+{
+    optional int32 ret  = 1;
+    optional uint32 seq = 2;  //序列号
+    optional uint32 cnt = 3;  //新的消息数量
+}
+
+message UserInfo
+{
+    optional uint32 id = 1;
+    optional string name = 2;
+    optional string passwd = 3;
+}
