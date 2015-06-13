@@ -10,7 +10,7 @@
 #include <string>
 using std::string;
 
-class UserInfo
+class UserInfo_
 {
 public:
     uint32_t id;

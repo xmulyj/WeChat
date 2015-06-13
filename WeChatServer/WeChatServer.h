@@ -28,14 +28,18 @@ using namespace enet;
 
 #include "CommonSend.h"
 #include "UserInfo.h"
+
+#include "../DBWrap/DBWrap.h"
+
 #include "../proto/WeChat.pb.h"
 #include "../proto/WeCmdID.pb.h"
 #include "../proto/WeStatus.pb.h"
+#include "../proto/WeCache.pb.h"
 
 class WeChatServer:public TCPServer, public CommonSend
 {
 public:
-    WeChatServer(ConfReader *conf):TCPServer(conf){}
+    WeChatServer(ConfReader *conf):TCPServer(conf),m_DBWrap(NULL){}
 protected:
     // @override
     int OnInit(ConfReader *config);
@@ -117,6 +121,8 @@ private:
     void FillMemberList(uint32_t id, MemberList &member_list);
 
     void NotifyUserStatus(const string &log_flag, uint32_t type, uint32_t id, uint32_t access_index);
+private:
+    DBWrap *m_DBWrap;
 private:
     DECL_LOGGER(logger);
 };

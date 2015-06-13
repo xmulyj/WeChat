@@ -24,6 +24,11 @@ int WeChatServer::OnInit(ConfReader *config)
     //添加其他初始化内容
     SetServer(this);
 
+    //初始化DB
+    string db_path = "../db/UserInfoDB";
+    m_DBWrap = new RocksDBWrap(db_path);
+    m_DBWrap->Init();
+
     return 0;
 }
 
@@ -51,7 +56,7 @@ IOStatus WeChatServer::OnError(TCPSession *session, uint64_t now_ms)
     if(it != m_SessionUserInfoMap.end())
     {
         //通知状态服务器(不需要回包)
-        NotifyUserStatus("OnError", 2, it->second->id, 1);
+        NotifyUserStatus("OnError", 2, it->second->id(), 1);
     }
 
     m_SessionUserInfoMap.erase(session);
@@ -140,7 +145,7 @@ int WeChatServer::OnRegReq(TCPSession *session, const char *data, uint32_t head_
     else
     {
         rsp.set_ret(0);
-        rsp.set_id(user_info->id);
+        rsp.set_id(user_info->id());
     }
 
     if(RspSvr(session, CMD_REQ_RSP, &rsp, 0) != 0)
@@ -185,12 +190,12 @@ int WeChatServer::OnLoginReq(TCPSession *session, const char *data, uint32_t hea
     else
     {
         rsp.set_ret(0);
-        rsp.set_id(user_info->id);
-        rsp.set_name(user_info->name);
-        FillMemberList(user_info->id, *(rsp.mutable_member_list()));
+        rsp.set_id(user_info->id());
+        rsp.set_name(user_info->name());
+        FillMemberList(user_info->id(), *(rsp.mutable_member_list()));
 
         //通知状态服务器(不需要回包)
-        NotifyUserStatus("OnLoginReq", 1, user_info->id, 1);
+        NotifyUserStatus("OnLoginReq", 1, user_info->id(), 1);
     }
 
     //回复登录回包
@@ -219,12 +224,12 @@ int WeChatServer::OnLoginReq(TCPSession *session, const char *data, uint32_t hea
 
     Msg msg;
     msg.set_type(0);
-    msg.set_send_id(user_info->id);
-    msg.set_send_name(user_info->name);
+    msg.set_send_id(user_info->id());
+    msg.set_send_name(user_info->name());
     msg.set_time(time(NULL));
 
     std::ostringstream oss;
-    oss<<"\""<<user_info->name<<"\" login...";
+    oss<<"\""<<user_info->name()<<"\" login...";
     msg.set_msg(oss.str());
 
     BroadcastMsg(msg);
@@ -249,13 +254,13 @@ int WeChatServer::OnLogoutReq(TCPSession *session, const char *data, uint32_t he
 
     Msg msg;
     msg.set_type(1);
-    msg.set_send_id(it->second.id);
-    msg.set_send_name(it->second.name);
+    msg.set_send_id(it->second.id());
+    msg.set_send_name(it->second.name());
     msg.set_time(time(NULL));
 
     std::ostringstream oss;
     oss.clear();
-    oss<<"\""<<it->second.name<<"\" logout...";
+    oss<<"\""<<it->second.name()<<"\" logout...";
     msg.set_msg(oss.str());
 
     m_SessionUserInfoMap.erase(session);
@@ -284,8 +289,8 @@ int WeChatServer::OnSendMsgReq(TCPSession *session, const char *data, uint32_t h
 
     Msg msg;
     msg.set_type(2);
-    msg.set_send_id(user_info.id);
-    msg.set_send_name(user_info.name);
+    msg.set_send_id(user_info.id());
+    msg.set_send_name(user_info.name());
     msg.set_msg(req.msg());
     msg.set_time(time(NULL));
 
@@ -311,12 +316,37 @@ void WeChatServer::BroadcastMsg(Msg &msg)
 
 UserInfo* WeChatServer::SaveNewUser(RegReq &req)
 {
-    UserInfo user_info;
-    user_info.id = GenID();
-    user_info.name = req.name();
-    user_info.passwd = req.passwd();
+    string user_count;
+    string USER_COUNT_KEY = "USER_COUNT";
 
-    std::pair<UserInfoMap::iterator, bool> ret = m_UserInfoMap.insert(std::make_pair(user_info.id, user_info));
+    uint32_t id = 10000;
+    if(m_DBWrap->Get(USER_COUNT_KEY, user_count) == true)
+    {
+        id = *(uint32_t*)(user_count.data()) + 1;
+    }
+
+    UserInfo user_info;
+    user_info.set_id(id);
+    user_info.set_name(req.name());
+    user_info.set_passwd(req.passwd());
+
+    //保存注册信息到db
+    string value;
+    user_info.SerializeToString(&value);
+    if(m_DBWrap->Put(user_info.id(), value) == false)
+    {
+        LOG_WARN(logger, "SaveNewUser to db failed. req="<<req.ShortDebugString());
+        return NULL;
+    }
+    //保存计数到db
+    value.assign((char*)&id, sizeof(id));
+    if(m_DBWrap->Put(USER_COUNT_KEY, value) == false)
+    {
+        LOG_WARN(logger, "SaveNewUser count to db failed. req="<<req.ShortDebugString());
+        return NULL;
+    }
+
+    std::pair<UserInfoMap::iterator, bool> ret = m_UserInfoMap.insert(std::make_pair(user_info.id(), user_info));
     return ret.second == false?NULL:&(ret.first->second);
 }
 
@@ -325,11 +355,22 @@ UserInfo* WeChatServer::LoginCheck(LoginReq &req)
     UserInfoMap::iterator it = m_UserInfoMap.find(req.id());
     if(it == m_UserInfoMap.end())
     {
-        return NULL;
+        //从db里面找以下
+        string value;
+        if(m_DBWrap->Get(req.id(), value) == false)  //db里面也没有(没有注册过)
+        {
+            return NULL;
+        }
+
+        //从db拉回来的用户信息放到内存里面
+        UserInfo user_info;
+        user_info.ParseFromString(value);
+        std::pair<UserInfoMap::iterator, bool> ret = m_UserInfoMap.insert(std::make_pair(user_info.id(), user_info));
+        it = ret.first;
     }
 
     UserInfo *user_info = &(it->second);
-    if(user_info->passwd != req.passwd())
+    if(user_info->passwd() != req.passwd())
     {
         return NULL;
     }
@@ -344,8 +385,8 @@ void WeChatServer::FillMemberList(uint32_t id, MemberList &member_list)
     {
         const UserInfo &user_info = it->second;
         MemberList::Member &member = *member_list.add_member();
-        member.set_id(user_info.id);
-        member.set_name(user_info.name);
+        member.set_id(user_info.id());
+        member.set_name(user_info.name());
     }
 }
 

@@ -25,7 +25,11 @@ public:
     virtual bool Put(uint32_t key, string &value)=0;
     virtual bool Get(uint32_t key, string &value)=0;
     virtual vector<bool> Get(vector<uint32_t> &key, vector<string> &value)=0;
-    virtual bool Del(uint32_t key_list)=0;
+    virtual bool Del(uint32_t key)=0;
+
+    virtual bool Put(string &key, string &value)=0;
+    virtual bool Get(string &key, string &value)=0;
+    virtual bool Del(string &key)=0;
 };
 
 
@@ -44,7 +48,9 @@ public:
     vector<bool> Get(vector<uint32_t> &key, vector<string> &value);
     bool Del(uint32_t key);
 
-
+    bool Put(string &key, string &value);
+    bool Get(string &key, string &value);
+    bool Del(string &key);
 
     static void ToDBKey(vector<uint32_t> &key_list0, vector<rocksdb::Slice> &key_list1)
     {
@@ -121,6 +127,26 @@ bool RocksDBWrap::Del(uint32_t key)
     rocksdb::Slice key_(buff, strlen(buff));
 
     rocksdb::Status s = m_DB->Delete(rocksdb::WriteOptions(), key_);
+    return s.ok()?true:false;
+}
+
+inline
+bool RocksDBWrap::Put(string &key, string &value)
+{
+    rocksdb::Status s = m_DB->Put(rocksdb::WriteOptions(), key, value);
+    return s.ok()?true:false;
+}
+inline
+bool RocksDBWrap::Get(string &key, string &value)
+{
+    rocksdb::Status s = m_DB->Get(rocksdb::ReadOptions(), key, &value);
+    return s.ok()?true:false;
+}
+
+inline
+bool RocksDBWrap::Del(string &key)
+{
+    rocksdb::Status s = m_DB->Delete(rocksdb::WriteOptions(), key);
     return s.ok()?true:false;
 }
 
